@@ -498,3 +498,13 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 	A = Y;
 	resultFlags(A);
 }
+
+:CALLF  imm8":"imm16			is op=0x22; imm8; imm16
+{
+# TODO: Handle far-call
+}
+
+:RETF      is op=0x80
+{
+# TODO: Handle far-return
+}
