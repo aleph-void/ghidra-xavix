@@ -4,13 +4,13 @@
   
   <language processor="XaviX"
             endian="little"
-            size="16"
+            size="24"
             variant="default"
             version="1.0"
             slafile="XaviX.sla"
             processorspec="XaviX.pspec"
             manualindexfile="../manuals/XaviX.idx"
-            id="XaviX:LE:16:default">
+            id="XaviX:LE:24:default">
     <description>XaviX 6502 Microcontroller</description>
     <compiler name="default" spec="XaviX.cspec" id="default"/>
   </language>

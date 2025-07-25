@@ -3,13 +3,16 @@
 define endian=little;
 define alignment=1;
 
-define space RAM     type=ram_space      size=2  default;
+define space lowbus   type=ram_space      size=2;
+define space extbus     type=ram_space      size=3  default;
 define space register type=register_space size=1;
 
 define register offset=0x00  size=1 [ A X Y P ];
 define register offset=0x20 size=2  [ PC      SP   ];
 define register offset=0x20 size=1  [ PCL PCH S SH ];
 define register offset=0x30 size=1 [ N V B D I Z C ];	# status bits
+
+define lowbus offset=0xFE size=1 [ CS DS ];
 
 #TOKENS
 
@@ -30,9 +33,14 @@ define token data (16)
 	imm16 = (0,15)
 ;
 
+define token data24 (24)
+	imm24hi = (0,7)
+	imm24lo = (8,23)
+;
+
 macro popSR() {
 	SP = SP + 1;
-	local ccr = *:1 SP;
+	local ccr = *[lowbus]:1 SP;
 	N = ccr[7,1];
 	V = ccr[6,1];
 	B = ccr[4,1];
@@ -51,7 +59,7 @@ macro pushSR() {
 	ccr[2,1] = I;
 	ccr[1,1] = Z;
 	ccr[0,1] = C;
-	*:1 (SP) = ccr;
+	*[lowbus]:1 (SP) = ccr;
 	SP = SP -1;
 }
 
@@ -74,7 +82,7 @@ macro subtraction_flags1(register, operand, result) {
 # Pseudo Instructions
 ################################################################
 
-define pcodeop readIRQ;
+define pcodeop segment;
 
 ################################################################
 REL: reloc		is rel	[ reloc = inst_next + rel; ] { export *:2 reloc; } 
@@ -82,9 +90,9 @@ REL: reloc		is rel	[ reloc = inst_next + rel; ] { export *:2 reloc; }
 # Immediate
 OP1: "#"imm8    is bbb=2; imm8			{ tmp:1 = imm8; export tmp; }
 # Zero Page
-OP1: imm8       is bbb=1; imm8			{ export *:1 imm8; }
+OP1: imm8       is bbb=1; imm8			{ export *[lowbus]:1 imm8; }
 # Zero Page Indexed X
-OP1: imm8,X     is bbb=5 & X; imm8		{ tmp:2 = zext(imm8 + X); export *:1 tmp; }
+OP1: imm8,X     is bbb=5 & X; imm8		{ tmp:2 = zext(imm8 + X); export *[lowbus]:1 tmp; }
 # Absolute
 OP1: imm16      is bbb=3; imm16			{ export *:1 imm16; }
 # Absolute Indexed X
@@ -92,19 +100,19 @@ OP1: imm16,X    is bbb=7 & X; imm16		{ tmp:2 = imm16 + zext(X); export *:1 tmp; 
 # Absolute Indexed Y
 OP1: imm16,Y    is bbb=6 & Y; imm16		{ tmp:2 = imm16 + zext(Y); export *:1 tmp; }
 # Indirect X
-OP1: (imm8,X)   is bbb=0 & X; imm8		{ addr:2 = zext(imm8 + X); tmp:2 = *:2 addr; export *:1 tmp; }
+OP1: (imm8,X)   is bbb=0 & X; imm8		{ addr:2 = zext(imm8 + X); ptr:3 = segment(DS,addr); tmp:2 = *:2 ptr; export *:1 tmp; }
 # Indirect Y
-OP1: (imm8),Y   is bbb=4 & Y; imm8		{ addr:2 = imm8; tmp:2 = *:2 addr; tmp = tmp + zext(Y); export *:1 tmp; }
+OP1: (imm8),Y   is bbb=4 & Y; imm8		{ addr:2 = imm8; ptr:3 = segment(DS,addr); tmp:2 = *:2 ptr; tmp = tmp + zext(Y); export *:1 tmp; }
 
 # Immediate
 OP2: "#"imm8    is bbb=0; imm8			{ tmp:1 = imm8; export tmp; }
 # Zero Page
-OP2: imm8       is bbb=1; imm8			{ export *:1 imm8; }
+OP2: imm8       is bbb=1; imm8			{ export *[lowbus]:1 imm8; }
 OP2: A          is bbb=2 & A            { export A; }
 # Absolute
 OP2: imm16      is bbb=3; imm16			{ export *:1 imm16; }
 # Zero Page Indexed X
-OP2: imm8,X     is bbb=5 & X; imm8		{ tmp:2 = zext(imm8 + X); export *:1 tmp; }
+OP2: imm8,X     is bbb=5 & X; imm8		{ tmp:2 = zext(imm8 + X); export *[lowbus]:1 tmp; }
 # Absolute Indexed X
 OP2: imm16,X    is bbb=7 & X; imm16		{ tmp:2 = imm16 + zext(X); export *:1 tmp; }
 
@@ -116,9 +124,9 @@ OP2LD: imm8,Y   is bbb=5 & Y; imm8		{ tmp:2 = zext(imm8 + Y); export *:1 tmp; }
 OP2LD: imm16,Y  is bbb=7 & Y; imm16		{ tmp:2 = imm16 + zext(Y); export *:1 tmp; }
 
 
-ADDR8:  imm8    is imm8		{ export *:1 imm8; }
-ADDR16: imm16   is imm16   	{ export *:1 imm16; }
-ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
+ADDR16: imm16   is imm16   	{ tmp:2 = imm16; ptr:3 = segment(CS,tmp); export ptr; }
+ADDR24: far is imm24hi & imm24lo [ far = (imm24hi << 16) | imm24lo; ] { export *:1 far; }
+ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; ptr:3 = segment(DS,tmp); tmp = *:2 ptr; ptr = segment(CS,tmp); export ptr; }
 
 
 # Instructions
@@ -192,13 +200,14 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 
 :BRK   is op=0x00
 {
-	*:2 (SP - 1) = inst_next;
+	*[lowbus]:2 (SP - 1) = inst_next;
 	SP = SP - 2;
 	B = 1;
 	pushSR();
 	I = 1;
 	local target:2 = 0xFFFE;
-	goto [*:2 target];
+	ptr:3 = zext(*[lowbus]:2 target);
+	goto [ptr];
 }
 
 :BVC  REL			is op=0x50; REL
@@ -303,7 +312,7 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 
 :JMP ADDR16     is (op=0x4C); ADDR16
 {
-	goto ADDR16;
+	goto [ADDR16];
 }
 
 :JMP ADDRI     is (op=0x6c); ADDRI
@@ -313,9 +322,9 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 
 :JSR   ADDR16    is op=0x20; ADDR16
 {
-	*:2 (SP-1) = inst_next;
+	*[lowbus]:2 (SP-1) = inst_next;
 	SP=SP-2; 
-	call ADDR16;
+	call [ADDR16];
 }
 
 :LDA OP1     is (cc=1 & aaa=5) ... & OP1
@@ -368,14 +377,14 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 
 :PHA     is op=0x48
 {
-	*:1 (SP) = A;
+	*[lowbus]:1 (SP) = A;
 	SP = SP - 1;
 }
 
 :PLA     is op=0x68
 {
 	SP = SP + 1;
-	A = *:1 (SP);
+	A = *[lowbus]:1 (SP);
 	resultFlags(A);
 }
 
@@ -406,7 +415,7 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 	popSR();
 	
     SP = SP+1;
-	tmp:2 = *:2 SP;
+	tmp:2 = *[lowbus]:2 SP;
 	SP = SP+1;
 	
 	return [tmp];
@@ -415,7 +424,7 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 :RTS      is op=0x60
 {
 	SP = SP+1;
-	tmp:2 = *:2 SP;
+	tmp:2 = *[lowbus]:2 SP;
 	SP = SP+1;
 	
 	return [tmp];
@@ -499,12 +508,30 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; export *:2 tmp; }
 	resultFlags(A);
 }
 
-:CALLF  imm8":"imm16			is op=0x22; imm8; imm16
+:CALLF  ADDR24			is op=0x22; ADDR24 & imm24hi
 {
-# TODO: Handle far-call
+	*[lowbus]:1 SP = CS;
+	SP=SP-1;
+
+	SP=SP-1;
+	*[lowbus]:2 SP = inst_next;
+	SP=SP-1; 
+
+	CS = imm24hi;
+	call ADDR24;
 }
 
 :RETF      is op=0x80
 {
-# TODO: Handle far-return
+	SP = SP+1;
+	inner:2 = *[lowbus]:2 SP;
+	SP = SP+1;
+
+	SP = SP+1;
+	base:1 = *[lowbus]:1 SP;
+
+	CS = base;
+	res:3 = segment(base,inner);
+
+	return [res];
 }
