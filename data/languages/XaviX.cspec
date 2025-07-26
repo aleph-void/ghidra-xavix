@@ -16,7 +16,10 @@
      <long_double_size value="8" />
   </data_organization>
   <global>
-    <range space="lowbus" first="0x0000" last="0x8000"/>
+    <!-- The following cut out bank registers so that the decompiler can use them as registers -->
+    <range space="lowbus" first="0x0000" last="0x00FD"/>
+    <!-- DATA_BANK, CODE_BANK -->
+    <range space="lowbus" first="0x0100" last="0x8000"/>
     <range space="extbus" first="0x000000" last="0xFFFFFF"/>
   </global>
   <stackpointer register="SP" space="lowbus" growth="negative"/>
