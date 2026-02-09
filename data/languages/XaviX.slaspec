@@ -4,7 +4,7 @@ define endian=little;
 define alignment=1;
 
 define space lowbus   type=ram_space      size=2;
-define space extbus     type=ram_space      size=3  default;
+define space extbus   type=ram_space      size=3  default;
 define space register type=register_space size=1;
 
 define register offset=0x00  size=1 [ A X Y P ];
@@ -205,8 +205,8 @@ ADDRI:  (imm16)   is imm16    { tmp:2 = imm16; ptr:3 = segment(DATA_BANK,tmp); t
 	B = 1;
 	pushSR();
 	I = 1;
-	local target:2 = 0xFFFE;
-	ptr:3 = zext(*[lowbus]:2 target);
+	local target:3 = 0x00FFFE;
+	ptr:3 = zext(*:2 target);
 	goto [ptr];
 }
 

@@ -6,6 +6,7 @@
   </properties>
 
   <programcounter register="PC"/>
+	<data_space space="lowbus"/>
   <segmentop space="extbus" userop="segment" farpointer="yes">
     <pcode>
       <input name="base" size="1"/>
