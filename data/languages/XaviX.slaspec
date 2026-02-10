@@ -669,10 +669,8 @@ ADDR16LO: imm16 is imm16 & imm16msb=0 {
   export *[lowbus]:2 tmp;
 }
 
-ADDR16HI: imm16 is imm16 & imm16msb=1 {
-  tmp:2 = imm16;
-  ptr:3 = segment(CODE_BANK, tmp);
-  export ptr;
+ADDR16HI: far is imm16 & imm16msb=1 [ far = (inst_start & 0xff0000) | imm16; ] {
+  export *[extbus]:3 far;
 }
 
 ADDR24LO: far is imm24hi & imm24lo & imm24lomsb=0 [ far = (imm24hi << 16) | imm24lo; ] {
@@ -681,17 +679,11 @@ ADDR24LO: far is imm24hi & imm24lo & imm24lomsb=0 [ far = (imm24hi << 16) | imm2
 }
 
 ADDR24LOEXT: far is imm24hi & imm24lo & imm24lomsb=0 [ far = (imm24hi << 16) | imm24lo; ] {
-  local bank:1 = imm24hi;
-  local tmp:2 = imm24lo;
-  ptr:3 = segment(bank, tmp);
-  export ptr;
+  export *[extbus]:3 far;
 }
 
 ADDR24HI: far is imm24hi & imm24lo & imm24lomsb=1 [ far = (imm24hi << 16) | imm24lo; ] {
-  local bank:1 = imm24hi;
-  local tmp:2 = imm24lo;
-  ptr:3 = segment(bank, tmp);
-  export ptr;
+  export *[extbus]:3 far;
 }
 
 ADDRI: (imm16) is imm16 {
@@ -999,7 +991,7 @@ ADDRI: (imm16) is imm16 {
 
 :JMP ADDR16HI is op=0x4C; ADDR16HI
 {
-  goto [ADDR16HI];
+  goto ADDR16HI;
 }
 
 :JMP ADDRI is op=0x6C; ADDRI
@@ -1031,7 +1023,7 @@ ADDRI: (imm16) is imm16 {
 {
   dummyStackRead(SP);
   pushWord(inst_next - 1);
-  call [ADDR16HI];
+  call ADDR16HI;
 }
 
 :LDA OP1R is (cc=1 & aaa=5) ... & OP1R
@@ -1710,7 +1702,7 @@ ADDRI: (imm16) is imm16 {
   pushSpecial(CODE_BANK);
   pushWord(inst_next - 1);
   CODE_BANK = imm24hi;
-  call [ADDR24LOEXT];
+  call ADDR24LOEXT;
 }
 
 :CALLF ADDR24HI is op=0x22; ADDR24HI & imm24hi
@@ -1719,7 +1711,7 @@ ADDRI: (imm16) is imm16 {
   pushSpecial(CODE_BANK);
   pushWord(inst_next - 1);
   CODE_BANK = imm24hi;
-  call [ADDR24HI];
+  call ADDR24HI;
 }
 
 :RETF is op=0x80
@@ -1741,3 +1733,4 @@ ADDRI: (imm16) is imm16 {
 <retf_low>
   return [inner];
 }
+

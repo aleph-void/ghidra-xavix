@@ -17,10 +17,9 @@
       ]]></body>
     </pcode>
     <constresolve>
-      <varnode space="lowbus" offset="0xfe" size="2"/>
+      <register name="CODE_BANK"/>
     </constresolve>
   </segmentop>
-
   <default_symbols>
     <symbol name="code_bank" address="lowbus:00FE"/>
     <symbol name="data_bank" address="lowbus:00FF"/>
