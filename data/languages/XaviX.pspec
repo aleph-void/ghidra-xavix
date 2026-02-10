@@ -13,19 +13,22 @@
       <input name="inner" size="2"/>
       <output name="res" size="3"/>
       <body><![CDATA[
-        res = (zext(base) << 16) + zext(inner);
+        res = ((zext(base) << 16) + zext(inner)) & 0x7fffff;
       ]]></body>
     </pcode>
     <constresolve>
-      <register name="DATA_BANK"/>
+      <varnode space="lowbus" offset="0xfe" size="2"/>
     </constresolve>
   </segmentop>
 
   <default_symbols>
+    <symbol name="code_bank" address="lowbus:00FE"/>
+    <symbol name="data_bank" address="lowbus:00FF"/>
     <symbol name="xavix_memoryemu_txarray" address="lowbus:4000"/>
     <symbol name="spriteram" address="lowbus:6000"/>
     <symbol name="palram_sh" address="lowbus:6800"/>
     <symbol name="palram_l" address="lowbus:6900"/>
+    <symbol name="segment_regs" address="lowbus:6A00"/>
     <symbol name="tmap1_regs" address="lowbus:6FC8"/>
     <symbol name="tmap2_regs" address="lowbus:6FD0"/>
     <symbol name="spriteregs" address="lowbus:6FD8"/>
@@ -87,9 +90,9 @@
     <symbol name="irq_source" address="lowbus:7FFC" volatile="true"/>
     <symbol name="irq_vector_lo" address="lowbus:7FFE"/>
     <symbol name="irq_vector_hi" address="lowbus:7FFF"/>
-    <symbol name="NMI" address="00FFFA" entry="true" type="code_ptr"/>
-    <symbol name="RES" address="00FFFC" entry="true" type="code_ptr"/>
-    <symbol name="IRQ" address="00FFFE" entry="true" type="code_ptr"/>
+    <symbol name="NMI" address="extbus:00FFFA" entry="true" type="code_ptr"/>
+    <symbol name="RES" address="extbus:00FFFC" entry="true" type="code_ptr"/>
+    <symbol name="IRQ" address="extbus:00FFFE" entry="true" type="code_ptr"/>
   </default_symbols>
 
   <default_memory_blocks>
