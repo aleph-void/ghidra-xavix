@@ -50,6 +50,17 @@
       <unaffected>
         <register name="SP"/>
       </unaffected>
+      <killedbycall>
+        <register name="A"/>
+        <register name="X"/>
+        <register name="Y"/>
+        <register name="N"/>
+        <register name="V"/>
+        <register name="B"/>
+        <register name="D"/>
+        <register name="Z"/>
+        <register name="C"/>
+      </killedbycall>
     </prototype>
   </default_proto>
 </compiler_spec>
