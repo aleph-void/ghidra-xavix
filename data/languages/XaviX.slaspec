@@ -3,19 +3,19 @@
 define endian=little;
 define alignment=1;
 
-define space lowbus   type=ram_space      size=2;
-define space extbus   type=ram_space      size=3  default;
-define space bankstack type=ram_space     size=1;
-define space register type=register_space size=1;
+define space lowbus    type=ram_space      size=2;
+define space extbus    type=ram_space      size=3  default;
+define space bankstack type=ram_space      size=1;
+define space register  type=register_space size=1;
 
 define register offset=0x00 size=1 [ A X Y P ];
 define register offset=0x20 size=2 [ PC SP ];
 define register offset=0x20 size=1 [ PCL PCH S SH ];
 define register offset=0x30 size=1 [ N V B D I Z C ]; # status bits
-define register offset=0x40 size=1 [ SSP SSINIT ];
-define register offset=0x42 size=1 [ VECEN NMIVL NMIVH IRQVL IRQVH VECINIT ];
+define register offset=0x40 size=1 [ SSP ];
 
-define lowbus offset=0xFE size=1 [ CODE_BANK DATA_BANK ];
+define lowbus offset=0xFE   size=1 [ CODE_BANK DATA_BANK ];
+define lowbus offset=0x7FF9 size=1 [ VECEN NMIVL NMIVH IRQSRC UNK7FFD IRQVL IRQVH ];
 
 # TOKENS
 
@@ -61,33 +61,13 @@ macro popByte(out) {
   out = *[lowbus]:1 spaddr;
 }
 
-macro ensureSpecialStack() {
-  if (SSINIT != 0) goto <done>;
-  SSP = 0xff;
-  SSINIT = 1;
-<done>
-}
-
-macro ensureVectorState() {
-  if (VECINIT != 0) goto <done>;
-  VECEN = 0;
-  NMIVL = 0;
-  NMIVH = 0;
-  IRQVL = 0;
-  IRQVH = 0;
-  VECINIT = 1;
-<done>
-}
-
 macro pushSpecial(value) {
   local v:1 = value;
-  ensureSpecialStack();
   *[bankstack]:1 SSP = v;
   SSP = SSP - 1;
 }
 
 macro popSpecial(out) {
-  ensureSpecialStack();
   SSP = SSP + 1;
   out = *[bankstack]:1 SSP;
 }
@@ -278,28 +258,7 @@ macro dataRead(addr, out) {
   local db:1 = DATA_BANK;
   if (db >= 0x80) goto <ext>;
   if (ea >= 0x8000) goto <ext>;
-  ensureVectorState();
-  if (ea == 0x7ff9) goto <read_vecen>;
-  if (ea == 0x7ffa) goto <read_nmivl>;
-  if (ea == 0x7ffb) goto <read_nmivh>;
-  if (ea == 0x7ffe) goto <read_irqvl>;
-  if (ea == 0x7fff) goto <read_irqvh>;
   out = *[lowbus]:1 ea;
-  goto <done>;
-<read_vecen>
-  out = VECEN;
-  goto <done>;
-<read_nmivl>
-  out = NMIVL;
-  goto <done>;
-<read_nmivh>
-  out = NMIVH;
-  goto <done>;
-<read_irqvl>
-  out = IRQVL;
-  goto <done>;
-<read_irqvh>
-  out = IRQVH;
   goto <done>;
 <ext>
   local ptr:3 = segment(db, ea);
@@ -313,28 +272,7 @@ macro dataWrite(addr, value) {
   local v:1 = value;
   if (db >= 0x80) goto <ext>;
   if (ea >= 0x8000) goto <ext>;
-  ensureVectorState();
-  if (ea == 0x7ff9) goto <write_vecen>;
-  if (ea == 0x7ffa) goto <write_nmivl>;
-  if (ea == 0x7ffb) goto <write_nmivh>;
-  if (ea == 0x7ffe) goto <write_irqvl>;
-  if (ea == 0x7fff) goto <write_irqvh>;
   *[lowbus]:1 ea = v;
-  goto <done>;
-<write_vecen>
-  VECEN = v;
-  goto <done>;
-<write_nmivl>
-  NMIVL = v;
-  goto <done>;
-<write_nmivh>
-  NMIVH = v;
-  goto <done>;
-<write_irqvl>
-  IRQVL = v;
-  goto <done>;
-<write_irqvh>
-  IRQVH = v;
   goto <done>;
 <ext>
   local ptr:3 = segment(db, ea);
@@ -827,8 +765,6 @@ ADDRI: (imm16) is imm16 {
   pushSR();
   I = 1;
   CODE_BANK = 0;
-  # XaviX supports custom vectors via callback-backed vector state.
-  ensureVectorState();
   local inner:2;
   # NOTE: MAME can redirect BRK to NMI in the nmi_pending race window.
   # SLEIGH has no dynamic nmi_pending/irq_taken state, so BRK always uses IRQ.
