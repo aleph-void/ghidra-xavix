@@ -13,7 +13,7 @@
       <input name="inner" size="2"/>
       <output name="res" size="3"/>
       <body><![CDATA[
-        res = ((zext(base) << 16) + zext(inner)) & 0x7fffff;
+        res = ((zext(base) << 16) + zext(inner)) & 0x3fffff;
       ]]></body>
     </pcode>
     <constresolve>

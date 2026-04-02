@@ -678,11 +678,11 @@ ADDR24LO: far is imm24hi & imm24lo & imm24lomsb=0 [ far = (imm24hi << 16) | imm2
   export *[lowbus]:2 tmp;
 }
 
-ADDR24LOEXT: far is imm24hi & imm24lo & imm24lomsb=0 [ far = (imm24hi << 16) | imm24lo; ] {
+ADDR24LOEXT: far is imm24hi & imm24lo & imm24lomsb=0 [ far = ((imm24hi << 16) | imm24lo) & 0x3fffff; ] {
   export *[extbus]:3 far;
 }
 
-ADDR24HI: far is imm24hi & imm24lo & imm24lomsb=1 [ far = (imm24hi << 16) | imm24lo; ] {
+ADDR24HI: far is imm24hi & imm24lo & imm24lomsb=1 [ far = ((imm24hi << 16) | imm24lo) & 0x3fffff; ] {
   export *[extbus]:3 far;
 }
 

@@ -22,7 +22,7 @@
     <range space="lowbus" first="0x0000" last="0x00FD"/>
     <!-- DATA_BANK, CODE_BANK -->
     <range space="lowbus" first="0x0100" last="0x7FFF"/>
-    <range space="extbus" first="0x000000" last="0x7FFFFF"/>
+    <range space="extbus" first="0x000000" last="0x3FFFFF"/>
   </global>
   <stackpointer register="SP" space="lowbus" growth="negative"/>
   <returnaddress>
