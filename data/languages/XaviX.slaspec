@@ -104,11 +104,11 @@ macro popSR() {
   C = ccr[0,1];
 }
 
-macro pushSR() {
+macro pushSR(bval) {
   local ccr:1 = 0xff;
   ccr[7,1] = N;
   ccr[6,1] = V;
-  ccr[4,1] = B;
+  ccr[4,1] = bval;
   ccr[3,1] = D;
   ccr[2,1] = I;
   ccr[1,1] = Z;
@@ -767,7 +767,7 @@ ADDRI: (imm16) is imm16 {
   local retpc:2 = inst_next + 1;
   pushWord(retpc);
   B = 1;
-  pushSR();
+  pushSR(1);
   I = 1;
   CODE_BANK = 0;
   local inner:2;
@@ -1066,7 +1066,8 @@ ADDRI: (imm16) is imm16 {
 :PHP is op=0x08
 {
   dummyCodeRead(inst_next);
-  pushSR();
+  # PHP always pushes the B bit set, whatever the B flag register holds.
+  pushSR(1);
 }
 
 :PLP is op=0x28
