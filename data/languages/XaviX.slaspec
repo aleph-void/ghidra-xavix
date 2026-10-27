@@ -47,7 +47,16 @@ define token data24 (24)
 # Helpers
 ################################################################
 
+# The pspec's segmentop is implemented by the `segment` userop (kept so the decompiler knows the
+# far-pointer shape).  The instruction semantics use the same arithmetic inline, because a userop
+# cannot be executed by Ghidra's emulator: ext address = ((bank << 16) + offset) & 0x3fffff.
 define pcodeop segment;
+
+macro segptr(bank, inner, out) {
+  local b3:3 = zext(bank);
+  local i3:3 = zext(inner);
+  out = ((b3 << 16) + i3) & 0x3fffff;
+}
 
 macro pushByte(value) {
   local spaddr:2 = zext(S) + 0x100;
@@ -266,7 +275,8 @@ macro dataRead(addr, out) {
   out = *[lowbus]:1 ea;
   goto <done>;
 <ext>
-  local ptr:3 = segment(db, ea);
+  local ptr:3;
+  segptr(db, ea, ptr);
   out = *:1 ptr;
 <done>
 }
@@ -280,7 +290,8 @@ macro dataWrite(addr, value) {
   *[lowbus]:1 ea = v;
   goto <done>;
 <ext>
-  local ptr:3 = segment(db, ea);
+  local ptr:3;
+  segptr(db, ea, ptr);
   *:1 ptr = v;
 <done>
 }
@@ -293,7 +304,8 @@ macro codeRead(addr, out) {
   out = *[lowbus]:1 ea;
   goto <done>;
 <ext>
-  local ptr:3 = segment(cb, ea);
+  local ptr:3;
+  segptr(cb, ea, ptr);
   out = *:1 ptr;
 <done>
 }
@@ -776,7 +788,8 @@ ADDRI: (imm16) is imm16 {
   if (VECEN != 0) goto <use_custom_irq_vector>;
   local romBank:1 = 0;
   local vectorAddr:2 = 0xfffe;
-  local target:3 = segment(romBank, vectorAddr);
+  local target:3;
+  segptr(romBank, vectorAddr, target);
   inner = *:2 target;
   goto <dispatch_vector>;
 <use_custom_irq_vector>
@@ -785,7 +798,8 @@ ADDRI: (imm16) is imm16 {
   inner = zext(vlo) | (zext(vhi) << 8);
 <dispatch_vector>
   if ((inner & 0x8000) == 0) goto <dispatch_low>;
-  ptr:3 = segment(CODE_BANK, inner);
+  local ptr:3;
+  segptr(CODE_BANK, inner, ptr);
   goto [ptr];
 <dispatch_low>
   goto [inner];
@@ -927,7 +941,8 @@ ADDRI: (imm16) is imm16 {
 {
   if (CODE_BANK < 0x80) goto ADDR16LO;
   local off16:2 = imm16;
-  local ptr:3 = segment(CODE_BANK, off16);
+  local ptr:3;
+  segptr(CODE_BANK, off16, ptr);
   goto [ptr];
 }
 
@@ -942,7 +957,8 @@ ADDRI: (imm16) is imm16 {
   if (CODE_BANK >= 0x80) goto <jmpi_ext>;
   if ((inner & 0x8000) == 0) goto <jmpi_low>;
 <jmpi_ext>
-  local ptr:3 = segment(CODE_BANK, inner);
+  local ptr:3;
+  segptr(CODE_BANK, inner, ptr);
   goto [ptr];
 <jmpi_low>
   goto [inner];
@@ -954,7 +970,8 @@ ADDRI: (imm16) is imm16 {
   pushWord(inst_next - 1);
   if (CODE_BANK < 0x80) goto <jsr_abs_lo_near>;
   local off16:2 = imm16;
-  local ptr:3 = segment(CODE_BANK, off16);
+  local ptr:3;
+  segptr(CODE_BANK, off16, ptr);
   call [ptr];
   goto <jsr_abs_lo_done>;
 <jsr_abs_lo_near>
@@ -1178,7 +1195,8 @@ ADDRI: (imm16) is imm16 {
   if (base >= 0x80) goto <rti_ext>;
   if ((inner & 0x8000) == 0) goto <rti_low>;
 <rti_ext>
-  res:3 = segment(base, inner);
+  local res:3;
+  segptr(base, inner, res);
   return [res];
 <rti_low>
   return [inner];
@@ -1195,7 +1213,8 @@ ADDRI: (imm16) is imm16 {
   if (CODE_BANK >= 0x80) goto <rts_ext>;
   if ((inner & 0x8000) == 0) goto <rts_low>;
 <rts_ext>
-  res:3 = segment(CODE_BANK, inner);
+  local res:3;
+  segptr(CODE_BANK, inner, res);
   return [res];
 <rts_low>
   return [inner];
@@ -1672,7 +1691,8 @@ ADDRI: (imm16) is imm16 {
   if (base >= 0x80) goto <retf_ext>;
   if ((inner & 0x8000) == 0) goto <retf_low>;
 <retf_ext>
-  res:3 = segment(base, inner);
+  local res:3;
+  segptr(base, inner, res);
   return [res];
 <retf_low>
   return [inner];
