@@ -616,8 +616,7 @@ OP2STMDB: imm16 is bbb=3; imm16 {
 }
 
 ADDR16LO: imm16 is imm16 & imm16msb=0 {
-  tmp:2 = imm16;
-  export *[lowbus]:2 tmp;
+  export *[lowbus]:2 imm16;
 }
 
 ADDR16HI: far is imm16 & imm16msb=1 [ far = (inst_start & 0xff0000) | imm16; ] {
@@ -625,8 +624,7 @@ ADDR16HI: far is imm16 & imm16msb=1 [ far = (inst_start & 0xff0000) | imm16; ] {
 }
 
 ADDR24LO: far is imm24hi & imm24lo & imm24lomsb=0 [ far = (imm24hi << 16) | imm24lo; ] {
-  tmp:2 = imm24lo;
-  export *[lowbus]:2 tmp;
+  export *[lowbus]:2 imm24lo;
 }
 
 ADDR24LOEXT: far is imm24hi & imm24lo & imm24lomsb=0 [ far = ((imm24hi << 16) | imm24lo) & 0x3fffff; ] {
@@ -935,7 +933,11 @@ ADDRI: (imm16) is imm16 {
 
 :JMP ADDR16LO is op=0x4C; ADDR16LO & imm16
 {
-  if (CODE_BANK < 0x80) goto ADDR16LO;
+  # The conditional branch targets a label, not ADDR16LO: a CBRANCH to an address outside the
+  # function made the decompiler fail ("Could not find op at target address").
+  if (CODE_BANK >= 0x80) goto <far>;
+  goto ADDR16LO;
+<far>
   local off16:2 = imm16;
   local ptr:3;
   segptr(CODE_BANK, off16, ptr);
