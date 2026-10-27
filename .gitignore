@@ -1,0 +1,6 @@
+*.sla
+*.sla.lock
+build/
+dist/
+lib/*.jar
+__pycache__/
