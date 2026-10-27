@@ -51,7 +51,8 @@ define pcodeop segment;
 
 macro pushByte(value) {
   local spaddr:2 = zext(S) + 0x100;
-  *[lowbus]:1 spaddr = value;
+  local v:1 = value;
+  *[lowbus]:1 spaddr = v;
   S = S - 1;
 }
 
@@ -74,8 +75,12 @@ macro popSpecial(out) {
 
 macro pushWord(value) {
   local tmp:2 = value;
-  pushByte(tmp >> 8);
-  pushByte(tmp);
+  # One byte at a time: a store takes the size of its value, so passing the 16-bit tmp >> 8 used to
+  # write two bytes and clobber the byte above the stack top with zero.
+  local hi:1 = tmp[8,8];
+  local lo:1 = tmp[0,8];
+  pushByte(hi);
+  pushByte(lo);
 }
 
 macro popWord(out) {
