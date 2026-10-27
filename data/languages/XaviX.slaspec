@@ -1608,16 +1608,9 @@ ADDRI: (imm16) is imm16 {
 
 :KIL is (op=0x02 | op=0x12 | op=0x32 | op=0x42 | op=0x52 | op=0x62 | op=0x72 | op=0x92 | op=0xB2 | op=0xD2 | op=0xF2)
 {
-  # MAME kil_non performs fixed reads then deadlocks, repeatedly reading 0xffff.
-  # Match the initial read_pc(); PC++; transition before deadlock.
-  dummyCodeRead(inst_next);
-  PC = inst_next + 1;
-  dummyDataRead(0xffff);
-  dummyDataRead(0xfffe);
-  dummyDataRead(0xfffe);
-<kil_spin>
-  dummyDataRead(0xffff);
-  goto <kil_spin>;
+  # The core locks up (it keeps reading $FFFF forever). A p-code loop with no operations inside
+  # hangs Ghidra's analysis, so the lock-up is a jump to the instruction itself.
+  goto inst_start;
 }
 
 
