@@ -332,23 +332,15 @@ macro zpageWrite(addr, value) {
 }
 
 macro dummyDataRead(addr) {
-  local discard:1;
-  dataRead(addr, discard);
 }
 
 macro dummyCodeRead(addr) {
-  local discard:1;
-  codeRead(addr, discard);
 }
 
 macro dummyZpageRead(addr) {
-  local discard:1;
-  zpageRead(addr, discard);
 }
 
 macro dummyStackRead(sp) {
-  local spaddr:2 = (sp & 0x00ff) + 0x100;
-  local discard:1 = *[lowbus]:1 spaddr;
 }
 
 macro zpageIndexedAddr(base, idx, out) {
@@ -366,23 +358,12 @@ macro fetchZpagePointer(base, out) {
 }
 
 macro dummyIndexedRead(base, indexed) {
-  local spill:2 = (base & 0xff00) | (indexed & 0x00ff);
-  dummyDataRead(spill);
 }
 
 macro dummyPageCrossRead(base, indexed) {
-  if ((base & 0xff00) == (indexed & 0xff00)) goto <same_page>;
-  dummyIndexedRead(base, indexed);
-<same_page>
 }
 
 macro dummyBranchTakenReads(target) {
-  local t:2 = target;
-  dummyCodeRead(inst_next);
-  if ((inst_next & 0xff00) == (t & 0xff00)) goto <same_page>;
-  local spill:2 = (inst_next & 0xff00) | (t & 0x00ff);
-  dummyCodeRead(spill);
-<same_page>
 }
 
 macro writeHighMasked(base, idx, source) {
