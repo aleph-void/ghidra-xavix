@@ -923,10 +923,11 @@ ADDRI: (imm16) is imm16 {
   resultFlags(X);
 }
 
-:JMP ADDR16LO is op=0x4C; ADDR16LO
+:JMP ADDR16LO is op=0x4C; ADDR16LO & imm16
 {
   if (CODE_BANK < 0x80) goto ADDR16LO;
-  local ptr:3 = segment(CODE_BANK, ADDR16LO);
+  local off16:2 = imm16;
+  local ptr:3 = segment(CODE_BANK, off16);
   goto [ptr];
 }
 
@@ -947,12 +948,13 @@ ADDRI: (imm16) is imm16 {
   goto [inner];
 }
 
-:JSR ADDR16LO is op=0x20; ADDR16LO
+:JSR ADDR16LO is op=0x20; ADDR16LO & imm16
 {
   dummyStackRead(SP);
   pushWord(inst_next - 1);
   if (CODE_BANK < 0x80) goto <jsr_abs_lo_near>;
-  local ptr:3 = segment(CODE_BANK, ADDR16LO);
+  local off16:2 = imm16;
+  local ptr:3 = segment(CODE_BANK, off16);
   call [ptr];
   goto <jsr_abs_lo_done>;
 <jsr_abs_lo_near>
