@@ -508,10 +508,6 @@ OP2R: "#"imm8 is bbb=0; imm8 {
   export tmp;
 }
 
-OP2R: A is bbb=2 & A {
-  export A;
-}
-
 OP2R: imm8 is bbb=1; imm8 {
   local zp:1 = imm8;
   local ea:2 = zext(zp);
