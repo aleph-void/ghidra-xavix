@@ -1,0 +1,639 @@
+# XaviX p-code cases.  Expectations are worked out by hand from the MCS6500 Family Programming
+# Manual (1976) and the published behaviour of the NMOS 6502 and its unintended opcodes.  The
+# XaviX-specific parts (CALLF/RETF, banks) have no public document: their cases check the contract
+# the module itself documents (bank byte pushed on the bank stack, return address pushed as
+# next-1) and are marked "self-consistency".  Code is placed at extbus:8000.  Memory is zero unless
+# set; the stack is lowbus:0100-01ff; S is the stack pointer low byte.
+
+# ---------------- ADC / SBC ----------------
+case adc_basic
+code 6920
+set A 0x10
+expect A 0x30
+expect C 0
+expect V 0
+expect N 0
+expect Z 0
+end
+case adc_carry_in_and_out
+code 6901
+set A 0xFF
+set C 1
+expect A 0x01
+expect C 1
+expect V 0
+expect Z 0
+end
+case adc_signed_overflow
+code 6950
+set A 0x50
+expect A 0xA0
+expect V 1
+expect N 1
+expect C 0
+end
+case adc_zero_with_carry
+code 6901
+set A 0xFF
+expect A 0x00
+expect C 1
+expect Z 1
+expect V 0
+expect N 0
+end
+case sbc_no_borrow
+code e930
+set A 0x50
+set C 1
+expect A 0x20
+expect C 1
+expect V 0
+expect N 0
+expect Z 0
+end
+case sbc_borrow_out
+code e920
+set A 0x10
+set C 1
+expect A 0xF0
+expect C 0
+expect N 1
+expect V 0
+end
+case sbc_signed_overflow
+code e901
+set A 0x80
+set C 1
+expect A 0x7F
+expect V 1
+expect C 1
+expect N 0
+end
+case sbc_borrow_in
+code e910
+set A 0x10
+set C 0
+expect A 0xFF
+expect C 0
+expect N 1
+expect Z 0
+end
+case adc_decimal
+code 6927
+set D 1
+set A 0x15
+expect A 0x42
+expect C 0
+end
+case adc_decimal_carry_out
+code 6901
+set D 1
+set A 0x99
+expect A 0x00
+expect C 1
+end
+case sbc_decimal
+code e915
+set D 1
+set A 0x42
+set C 1
+expect A 0x27
+expect C 1
+end
+case sbc_decimal_borrow
+code e911
+set D 1
+set A 0x10
+set C 1
+expect A 0x99
+expect C 0
+end
+
+# ---------------- logic, compare ----------------
+case and_imm
+code 293C
+set A 0xF0
+expect A 0x30
+expect N 0
+expect Z 0
+end
+case ora_imm_sets_n
+code 0980
+set A 0x0F
+expect A 0x8F
+expect N 1
+end
+case eor_to_zero
+code 49FF
+set A 0xFF
+expect A 0x00
+expect Z 1
+end
+case cmp_equal
+code c940
+set A 0x40
+expect A 0x40
+expect Z 1
+expect C 1
+expect N 0
+end
+case cmp_less
+code c940
+set A 0x30
+expect Z 0
+expect C 0
+expect N 1
+end
+case cmp_greater
+code c901
+set A 0x80
+expect Z 0
+expect C 1
+expect N 0
+end
+case cpx_equal
+code e005
+set X 5
+expect Z 1
+expect C 1
+end
+case cpy_less
+code c002
+set Y 1
+expect Z 0
+expect C 0
+expect N 1
+end
+case bit_zp
+code 2410
+set A 0x01
+set lowbus:10 0xC0
+expect Z 1
+expect N 1
+expect V 1
+expect A 0x01
+end
+
+# ---------------- shifts, inc/dec ----------------
+case asl_a
+code 0a
+set A 0x81
+expect A 0x02
+expect C 1
+expect N 0
+end
+case lsr_a
+code 4a
+set A 0x01
+expect A 0x00
+expect C 1
+expect Z 1
+expect N 0
+end
+case rol_a_carry_in
+code 2a
+set A 0x80
+set C 1
+expect A 0x01
+expect C 1
+end
+case ror_a_carry_in
+code 6a
+set A 0x01
+set C 1
+expect A 0x80
+expect C 1
+expect N 1
+end
+case asl_zp
+code 0610
+set lowbus:10 0x81
+expect lowbus:10 0x02
+expect C 1
+end
+case ror_zp
+code 6610
+set lowbus:10 0x01
+expect lowbus:10 0x00
+expect C 1
+expect Z 1
+end
+case inc_zp_wraps_to_zero
+code e610
+set lowbus:10 0xFF
+expect lowbus:10 0x00
+expect Z 1
+expect N 0
+end
+case dec_zp_wraps_negative
+code c610
+expect lowbus:10 0xFF
+expect N 1
+end
+case inx_dey
+code e888
+set X 0xFF
+set Y 0x00
+expect X 0x00
+expect Y 0xFF
+expect N 1
+end
+
+# ---------------- transfers, flags ----------------
+case tax_sets_n
+code aa
+set A 0x80
+expect X 0x80
+expect N 1
+end
+case txs_keeps_flags
+code 9a
+set X 0xAB
+set Z 1
+expect S 0xAB
+expect Z 1
+end
+case tsx_zero
+code ba
+set X 0x33
+expect X 0x00
+expect Z 1
+end
+case flag_set_instructions
+code f87838
+expect D 1
+expect I 1
+expect C 1
+end
+case flag_clear_instructions
+code d85818b8
+set D 1
+set I 1
+set C 1
+set V 1
+expect D 0
+expect I 0
+expect C 0
+expect V 0
+end
+
+# ---------------- addressing modes ----------------
+case lda_zp_x_wraps_in_zero_page
+code b520
+set X 0xF0
+set lowbus:10 0x77
+expect A 0x77
+end
+case lda_abs_x
+code bd0010
+set X 3
+set lowbus:1003 0x55
+expect A 0x55
+end
+case lda_abs_y
+code b90010
+set Y 4
+set lowbus:1004 0x66
+expect A 0x66
+end
+case lda_zp_x_indirect
+code a120
+set X 2
+set lowbus:22 0x00
+set lowbus:23 0x20
+set lowbus:2000 0xAB
+expect A 0xAB
+end
+case lda_zp_indirect_y
+code b130
+set Y 5
+set lowbus:30 0x00
+set lowbus:31 0x20
+set lowbus:2005 0xCD
+expect A 0xCD
+end
+case ldx_zp_y
+code b610
+set Y 3
+set lowbus:13 0x44
+expect X 0x44
+end
+case sta_abs_x
+code 9d0030
+set A 0x5A
+set X 2
+expect lowbus:3002 0x5A
+end
+case sta_zp_indirect_y
+code 9140
+set A 0x7E
+set Y 1
+set lowbus:40 0x00
+set lowbus:41 0x30
+expect lowbus:3001 0x7E
+end
+case stx_zp_y
+code 9610
+set X 0x12
+set Y 3
+expect lowbus:13 0x12
+end
+
+# ---------------- stack ----------------
+case pha_pla
+code 48a90068
+set S 0xFF
+set A 0x42
+expect A 0x42
+expect lowbus:1FF 0x42
+expect S 0xFF
+end
+case php_pushes_b_set_then_plp
+code 081828
+set S 0xFF
+set N 1
+set C 1
+expect lowbus:1FF 0xB1
+expect C 1
+expect N 1
+expect S 0xFF
+end
+
+# ---------------- branches, jumps, calls ----------------
+case beq_taken
+code f002a211a022
+set Z 1
+expect X 0
+expect Y 0x22
+end
+case bne_not_taken
+code d002a211a022
+set Z 1
+expect X 0x11
+expect Y 0x22
+end
+case bcc_taken_bcs_not
+code 900290b0
+expect PC 0x8004
+end
+case backward_loop
+code a203cad0fd
+expect X 0
+expect Z 1
+end
+case jsr_rts
+code 200880a0074c0b80a20960
+set S 0xFF
+expect X 9
+expect Y 7
+expect S 0xFF
+expect lowbus:1FF 0x80
+expect lowbus:1FE 0x02
+end
+case jmp_abs
+code 4c0580a211a033
+expect X 0
+expect Y 0x33
+end
+case jmp_indirect
+code 6c1000a211a033
+set lowbus:10 0x05
+set lowbus:11 0x80
+expect X 0
+expect Y 0x33
+end
+case brk_vector
+code 00
+until 9000
+set S 0xFF
+set extbus:FFFE 0x00
+set extbus:FFFF 0x90
+expect PC 0x9000
+expect I 1
+expect S 0xFC
+expect lowbus:1FF 0x80
+expect lowbus:1FE 0x02
+expect lowbus:1FD 0x30
+end
+case rti_restores_flags_and_pc
+code 40
+until 8005
+set S 0xFC
+set SSP 0xFE
+set lowbus:1FD 0x31
+set lowbus:1FE 0x05
+set lowbus:1FF 0x80
+expect PC 0x8005
+expect C 1
+expect Z 0
+expect S 0xFF
+expect SSP 0xFF
+end
+
+# ---------------- unintended opcodes (NMOS 6502 behaviour) ----------------
+case slo_zp
+code 0710
+set A 0x01
+set lowbus:10 0x81
+expect lowbus:10 0x02
+expect A 0x03
+expect C 1
+end
+case rla_zp
+code 2710
+set A 0xFF
+set C 1
+set lowbus:10 0x80
+expect lowbus:10 0x01
+expect A 0x01
+expect C 1
+end
+case sre_zp
+code 4710
+set A 0x0F
+set lowbus:10 0x03
+expect lowbus:10 0x01
+expect A 0x0E
+expect C 1
+end
+case rra_zp
+code 6710
+set A 0x10
+set C 1
+set lowbus:10 0x02
+expect lowbus:10 0x81
+expect A 0x91
+expect C 0
+expect V 0
+expect N 1
+end
+case dcp_zp
+code c710
+set A 0x04
+set lowbus:10 0x05
+expect lowbus:10 0x04
+expect Z 1
+expect C 1
+end
+case isb_zp
+code e710
+set A 0x20
+set C 1
+set lowbus:10 0x0F
+expect lowbus:10 0x10
+expect A 0x10
+expect C 1
+end
+case lax_zp
+code a710
+set lowbus:10 0x80
+expect A 0x80
+expect X 0x80
+expect N 1
+end
+case sax_zp
+code 8710
+set A 0xF3
+set X 0x3F
+set Z 1
+expect lowbus:10 0x33
+expect Z 1
+end
+case anc_imm
+code 0b80
+set A 0xFF
+expect A 0x80
+expect N 1
+expect C 1
+end
+case asr_imm
+code 4b03
+set A 0x0F
+expect A 0x01
+expect C 1
+end
+case sbx_imm
+code cb02
+set A 0x0F
+set X 0x07
+expect X 0x05
+expect C 1
+expect A 0x0F
+end
+
+# ---------------- XaviX banking (model contract; no public document) ----------------
+case data_bank_1_high_address
+code ad2381
+set DATA_BANK 0x01
+set extbus:18123 0xAA
+expect A 0xAA
+end
+case data_bank_0_high_address
+code ad2381
+set extbus:8123 0x11
+expect A 0x11
+end
+case data_bank_80_low_address_reads_ext
+code ad1000
+set DATA_BANK 0x80
+set extbus:10 0x6C
+set lowbus:10 0x00
+expect A 0x6C
+end
+case data_bank_80_write_goes_to_ext
+code 8d1000
+set DATA_BANK 0x80
+set A 0x3D
+expect extbus:10 0x3D
+end
+case callf_retf_self_consistency
+code 22000980a0074c0c80a20980
+until 800c
+set S 0xFF
+set SSP 0xFF
+expect X 9
+expect Y 7
+expect S 0xFF
+expect SSP 0xFF
+expect bankstack:FF 0x00
+end
+case callf_other_bank_self_consistency
+code 22010980a007
+put 18009 a20980
+set S 0xFF
+set SSP 0xFF
+until 8004
+expect X 9
+expect CODE_BANK 0
+expect S 0xFF
+end
+
+# ---------------- jumps and calls to addresses below $8000 land in lowbus (RAM code) ----------------
+case jmp_abs_low_goes_to_lowbus
+code 4c0010
+until 1000
+untilspace lowbus
+expect PC 0x1000
+end
+case jsr_abs_low_goes_to_lowbus
+code 200010
+until 1000
+untilspace lowbus
+set S 0xFF
+expect PC 0x1000
+expect lowbus:1FF 0x80
+expect lowbus:1FE 0x02
+expect S 0xFD
+end
+case callf_low_goes_to_lowbus
+code 22000010
+until 1000
+untilspace lowbus
+set S 0xFF
+set SSP 0xFF
+expect PC 0x1000
+expect lowbus:1FF 0x80
+expect lowbus:1FE 0x03
+end
+
+# ---------------- regression: a push must not touch the byte above the stack top ----------------
+case jsr_does_not_clobber_caller_frame
+code 200880a0074c0b80a20960
+set S 0xFB
+set lowbus:1FC 0x2E
+set lowbus:1FD 0x82
+expect lowbus:1FC 0x2E
+expect lowbus:1FD 0x82
+expect lowbus:1FB 0x80
+expect lowbus:1FA 0x02
+expect S 0xFB
+end
+case callf_does_not_clobber_caller_frame
+code 22000980a0074c0c80a20980
+set S 0xFB
+set SSP 0xFF
+set lowbus:1FC 0x2E
+expect lowbus:1FC 0x2E
+expect lowbus:1FB 0x80
+expect lowbus:1FA 0x03
+expect S 0xFB
+end
+case brk_does_not_clobber_caller_frame
+code 00
+until 9000
+set S 0xFB
+set extbus:FFFE 0x00
+set extbus:FFFF 0x90
+set lowbus:1FC 0x2E
+expect lowbus:1FC 0x2E
+expect lowbus:1FB 0x80
+expect lowbus:1FA 0x02
+expect lowbus:1F9 0x30
+end
+
+# ---------------- the check must be able to fail ----------------
+case deliberately_wrong_expectation broken
+code 6920
+set A 0x10
+expect A 0x31
+end
