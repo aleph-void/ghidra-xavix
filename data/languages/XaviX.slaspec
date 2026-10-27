@@ -58,6 +58,16 @@ macro segptr(bank, inner, out) {
   out = ((b3 << 16) + i3) & 0x3fffff;
 }
 
+# Destination of an indirect jump, return or interrupt: the bank applies when it is >= $80 or the
+# address is >= $8000, otherwise the code is in the low RAM half and the bank is ignored.  Written
+# without branches: two conditional branches in front of the return made the decompiler fail with
+# "Conditional execution: Illegal op in iblock" when they followed a push/pop pair.
+macro farTarget(bank, inner, out) {
+  local sel:1 = (bank >= 0x80) | ((inner & 0x8000) != 0);
+  local eff:1 = bank * sel;
+  segptr(eff, inner, out);
+}
+
 macro pushByte(value) {
   local spaddr:2 = zext(S) + 0x100;
   local v:1 = value;
@@ -791,12 +801,9 @@ ADDRI: (imm16) is imm16 {
   local vhi:1 = IRQVH;
   inner = zext(vlo) | (zext(vhi) << 8);
 <dispatch_vector>
-  if ((inner & 0x8000) == 0) goto <dispatch_low>;
   local ptr:3;
-  segptr(CODE_BANK, inner, ptr);
+  farTarget(CODE_BANK, inner, ptr);
   goto [ptr];
-<dispatch_low>
-  goto [inner];
 }
 
 :BVC REL is op=0x50; REL
@@ -952,14 +959,9 @@ ADDRI: (imm16) is imm16 {
 :JMP ADDRI is op=0x6C; ADDRI
 {
   local inner:2 = ADDRI;
-  if (CODE_BANK >= 0x80) goto <jmpi_ext>;
-  if ((inner & 0x8000) == 0) goto <jmpi_low>;
-<jmpi_ext>
   local ptr:3;
-  segptr(CODE_BANK, inner, ptr);
+  farTarget(CODE_BANK, inner, ptr);
   goto [ptr];
-<jmpi_low>
-  goto [inner];
 }
 
 :JSR ADDR16LO is op=0x20; ADDR16LO & imm16
@@ -1190,14 +1192,9 @@ ADDRI: (imm16) is imm16 {
   popWord(inner);
   popSpecial(base);
   CODE_BANK = base;
-  if (base >= 0x80) goto <rti_ext>;
-  if ((inner & 0x8000) == 0) goto <rti_low>;
-<rti_ext>
   local res:3;
-  segptr(base, inner, res);
+  farTarget(base, inner, res);
   return [res];
-<rti_low>
-  return [inner];
 }
 
 :RTS is op=0x60
@@ -1208,14 +1205,9 @@ ADDRI: (imm16) is imm16 {
   popWord(inner);
   dummyCodeRead(inner);
   inner = inner + 1;
-  if (CODE_BANK >= 0x80) goto <rts_ext>;
-  if ((inner & 0x8000) == 0) goto <rts_low>;
-<rts_ext>
   local res:3;
-  segptr(CODE_BANK, inner, res);
+  farTarget(CODE_BANK, inner, res);
   return [res];
-<rts_low>
-  return [inner];
 }
 
 :SBC OP1R is (cc=1 & aaa=7) ... & OP1R
@@ -1686,13 +1678,8 @@ ADDRI: (imm16) is imm16 {
   CODE_BANK = base;
   dummyCodeRead(inner);
   inner = inner + 1;
-  if (base >= 0x80) goto <retf_ext>;
-  if ((inner & 0x8000) == 0) goto <retf_low>;
-<retf_ext>
   local res:3;
-  segptr(base, inner, res);
+  farTarget(base, inner, res);
   return [res];
-<retf_low>
-  return [inner];
 }
 
