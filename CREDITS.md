@@ -4,9 +4,10 @@
 
 - Repository: https://github.com/widberg/rad_sbw (the Ghidra language is in
   `ghidra/Ghidra/Processors/XaviX`; the rest of the repository is tooling for one commercial game's ROM and
-  is untouched)
+  is not included). This repository holds that directory's history only (`git subtree split`), with the
+  original commits and authors
 - Commit imported: `fb0551ed6370f09447b4776189ca0ecaeb9c34f4` ("Add killedbycall list to cspec",
-  2026-04-02), the only commit of the clone
+  2026-04-02), the last upstream commit touching the module
 - License: MIT, Copyright (c) 2025 widberg (`LICENSE`); the module also carries Ghidra's template
   `LICENSE.txt` (Apache-2.0)
 - Original author: widberg (widberg@widberg.me), who wrote the SLEIGH language, the compiler and

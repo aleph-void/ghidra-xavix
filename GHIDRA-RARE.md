@@ -1,6 +1,6 @@
 # SSD XaviX: verification notes (Ghidra-Rare)
 
-Module `ghidra/Ghidra/Processors/XaviX/` (extension name `XaviX`), language `XaviX:LE:24:default`
+Module at the repository root (upstream path `ghidra/Ghidra/Processors/XaviX/` in widberg/rad_sbw; extension name `XaviX`), language `XaviX:LE:24:default`
 (the original XaviX core, `unidasm -arch xavix`: a 6502 with the NMOS unintended opcodes, `CALLF`/`RETF`,
 a bank register pair at $FE/$FF and a 22-bit external bus). Provenance and the list of changes are in
 [CREDITS.md](CREDITS.md). Everything below is reproduced by `test/run-tests.sh [--real] <workdir>` (needs
